@@ -1,0 +1,138 @@
+using System;
+using System.Drawing;
+using System.IO;
+using System.Windows.Forms;
+
+namespace ToDoListApp
+{
+    public partial class frmToDoList : Form
+    {
+        public frmToDoList()
+        {
+            InitializeComponent();
+        }
+
+        
+        private void btnAdd_Click(object sender, EventArgs e)
+        {
+            if (!string.IsNullOrWhiteSpace(txtTask.Text))
+            {
+                lstTasks.Items.Add(txtTask.Text);
+                txtTask.Clear();
+                UpdateTaskCount();
+            }
+            else
+            {
+                MessageBox.Show("Please enter a task.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        
+        private void btnEdit_Click(object sender, EventArgs e)
+        {
+            if (lstTasks.SelectedItem != null)
+            {
+                txtTask.Text = lstTasks.SelectedItem.ToString();
+                lstTasks.Items.Remove(lstTasks.SelectedItem);
+                UpdateTaskCount();
+            }
+            else
+            {
+                MessageBox.Show("Please select a task to edit.", "Selection Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        
+        private void btnDelete_Click(object sender, EventArgs e)
+        {
+            if (lstTasks.SelectedItem != null)
+            {
+                lstTasks.Items.Remove(lstTasks.SelectedItem);
+                UpdateTaskCount();
+            }
+            else
+            {
+                MessageBox.Show("Please select a task to delete.", "Selection Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        
+        private void btnMarkComplete_Click(object sender, EventArgs e)
+        {
+            if (lstTasks.SelectedItem != null)
+            {
+                int index = lstTasks.SelectedIndex;
+                string completedTask = "✔ " + lstTasks.SelectedItem.ToString();
+                lstTasks.Items[index] = completedTask;
+            }
+            else
+            {
+                MessageBox.Show("Please select a task to mark as completed.", "Selection Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        
+        private void UpdateTaskCount()
+        {
+            lblTotalTasks.Text = $"Total Tasks: {lstTasks.Items.Count}";
+        }
+
+       
+        private void SaveTasks()
+        {
+            using (StreamWriter writer = new StreamWriter("tasks.txt"))
+            {
+                foreach (var task in lstTasks.Items)
+                {
+                    writer.WriteLine(task.ToString());
+                }
+            }
+        }
+
+        
+        private void LoadTasks()
+        {
+            if (File.Exists("tasks.txt"))
+            {
+                using (StreamReader reader = new StreamReader("tasks.txt"))
+                {
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        lstTasks.Items.Add(line);
+                    }
+                }
+            }
+            UpdateTaskCount();
+        }
+
+        
+        private void chkDarkMode_CheckedChanged(object sender, EventArgs e)
+        {
+            if (chkDarkMode.Checked)
+            {
+                this.BackColor = Color.DarkSlateGray;
+                lblTitle.ForeColor = Color.White;
+                lblTotalTasks.ForeColor = Color.White;
+            }
+            else
+            {
+                this.BackColor = Color.LightSteelBlue;
+                lblTitle.ForeColor = Color.Navy;
+                lblTotalTasks.ForeColor = Color.DarkBlue;
+            }
+        }
+
+        
+        private void frmToDoList_Load(object sender, EventArgs e)
+        {
+            LoadTasks();
+        }
+
+        
+        private void frmToDoList_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            SaveTasks();
+        }
+    }
+}
