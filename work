@@ -1,0 +1,120 @@
+using System;
+using System.IO;
+using System.Windows.Forms;
+
+namespace ToDoListApp
+{
+    public partial class frmToDoList : Form
+    {
+        public frmToDoList()
+        {
+            InitializeComponent();
+        }
+
+        // Add Task
+        private void btnAdd_Click(object sender, EventArgs e)
+        {
+            if (!string.IsNullOrWhiteSpace(txtTask.Text))
+            {
+                lstTasks.Items.Add(txtTask.Text);
+                txtTask.Clear();
+                UpdateTaskCount();
+            }
+            else
+            {
+                MessageBox.Show("Please enter a task.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        // Edit Task
+        private void btnEdit_Click(object sender, EventArgs e)
+        {
+            if (lstTasks.SelectedItem != null)
+            {
+                txtTask.Text = lstTasks.SelectedItem.ToString();
+                lstTasks.Items.Remove(lstTasks.SelectedItem);
+                UpdateTaskCount();
+            }
+            else
+            {
+                MessageBox.Show("Please select a task to edit.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        // Delete Task
+        private void btnDelete_Click(object sender, EventArgs e)
+        {
+            if (lstTasks.SelectedItem != null)
+            {
+                lstTasks.Items.Remove(lstTasks.SelectedItem);
+                UpdateTaskCount();
+            }
+            else
+            {
+                MessageBox.Show("Please select a task to delete.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        // Mark Task as Completed
+        private void btnMarkComplete_Click(object sender, EventArgs e)
+        {
+            if (lstTasks.SelectedItem != null)
+            {
+                int index = lstTasks.SelectedIndex;
+                string completedTask = "✔ " + lstTasks.SelectedItem.ToString();
+                lstTasks.Items[index] = completedTask;
+            }
+            else
+            {
+                MessageBox.Show("Please select a task to mark as completed.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        // Update Task Count
+        private void UpdateTaskCount()
+        {
+            lblTotalTasks.Text = $"Total Tasks: {lstTasks.Items.Count}";
+        }
+
+        // Save Tasks to File (Bonus Feature)
+        private void SaveTasks()
+        {
+            using (StreamWriter writer = new StreamWriter("tasks.txt"))
+            {
+                foreach (var task in lstTasks.Items)
+                {
+                    writer.WriteLine(task.ToString());
+                }
+            }
+        }
+
+        // Load Tasks from File (Bonus Feature)
+        private void LoadTasks()
+        {
+            if (File.Exists("tasks.txt"))
+            {
+                using (StreamReader reader = new StreamReader("tasks.txt"))
+                {
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        lstTasks.Items.Add(line);
+                    }
+                }
+            }
+            UpdateTaskCount();
+        }
+
+        // Form Load Event (To Load Tasks)
+        private void frmToDoList_Load(object sender, EventArgs e)
+        {
+            LoadTasks();
+        }
+
+        // Form Closing Event (To Save Tasks)
+        private void frmToDoList_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            SaveTasks();
+        }
+    }
+}
