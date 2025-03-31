@@ -1,0 +1,232 @@
+using System;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Windows.Forms;
+
+namespace SimpleEmployeeManagement
+{
+    static class Program
+    {
+        [STAThread]
+        static void Main()
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            
+            Application.Run(new LoginForm());
+        }
+    }
+
+    
+    public static class DataAccess
+    {
+        
+        private static string connectionString = "Data Source=YOUR_SERVER;Initial Catalog=YourDatabase;Integrated Security=True;";
+
+        public static DataTable ExecuteQuery(string query, params SqlParameter[] parameters)
+        {
+            DataTable dt = new DataTable();
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand(query, conn))
+            {
+                if (parameters != null)
+                    cmd.Parameters.AddRange(parameters);
+                conn.Open();
+                new SqlDataAdapter(cmd).Fill(dt);
+            }
+            return dt;
+        }
+
+        public static int ExecuteNonQuery(string query, params SqlParameter[] parameters)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand(query, conn))
+            {
+                if (parameters != null)
+                    cmd.Parameters.AddRange(parameters);
+                conn.Open();
+                return cmd.ExecuteNonQuery();
+            }
+        }
+    }
+
+    
+    public class LoginForm : Form
+    {
+        private TextBox txtUsername, txtPassword;
+        private Button btnLogin, btnRegister;
+
+        public LoginForm()
+        {
+            this.Text = "Login";
+            this.Size = new Size(300, 200);
+            this.StartPosition = FormStartPosition.CenterScreen;
+
+            Label lblUser = new Label() { Text = "Username:", Location = new Point(10, 20), AutoSize = true };
+            txtUsername = new TextBox() { Location = new Point(100, 20), Width = 150 };
+
+            Label lblPass = new Label() { Text = "Password:", Location = new Point(10, 60), AutoSize = true };
+            txtPassword = new TextBox() { Location = new Point(100, 60), Width = 150, PasswordChar = '*' };
+
+            btnLogin = new Button() { Text = "Login", Location = new Point(10, 100) };
+            btnLogin.Click += BtnLogin_Click;
+
+            btnRegister = new Button() { Text = "Register", Location = new Point(100, 100) };
+            btnRegister.Click += BtnRegister_Click;
+
+            this.Controls.AddRange(new Control[] { lblUser, txtUsername, lblPass, txtPassword, btnLogin, btnRegister });
+        }
+
+        private void BtnLogin_Click(object sender, EventArgs e)
+        {
+            string query = "SELECT * FROM Users WHERE Username=@username AND Password=@password";
+            DataTable dt = DataAccess.ExecuteQuery(query,
+                new SqlParameter("@username", txtUsername.Text),
+                new SqlParameter("@password", txtPassword.Text));
+
+            if (dt.Rows.Count > 0)
+            {
+                
+                (new MainForm(txtUsername.Text)).Show();
+                this.Hide();
+            }
+            else
+            {
+                MessageBox.Show("Invalid username or password.");
+            }
+        }
+
+        private void BtnRegister_Click(object sender, EventArgs e)
+        {
+            
+            (new RegistrationForm()).ShowDialog();
+        }
+    }
+
+    
+    public class RegistrationForm : Form
+    {
+        private TextBox txtUsername, txtPassword, txtConfirm;
+        private Button btnSubmit;
+
+        public RegistrationForm()
+        {
+            this.Text = "Register";
+            this.Size = new Size(300, 250);
+            this.StartPosition = FormStartPosition.CenterScreen;
+
+            Label lblUser = new Label() { Text = "Username:", Location = new Point(10, 20), AutoSize = true };
+            txtUsername = new TextBox() { Location = new Point(100, 20), Width = 150 };
+
+            Label lblPass = new Label() { Text = "Password:", Location = new Point(10, 60), AutoSize = true };
+            txtPassword = new TextBox() { Location = new Point(100, 60), Width = 150, PasswordChar = '*' };
+
+            Label lblConfirm = new Label() { Text = "Confirm:", Location = new Point(10, 100), AutoSize = true };
+            txtConfirm = new TextBox() { Location = new Point(100, 100), Width = 150, PasswordChar = '*' };
+
+            btnSubmit = new Button() { Text = "Register", Location = new Point(100, 150) };
+            btnSubmit.Click += BtnSubmit_Click;
+
+            this.Controls.AddRange(new Control[] { lblUser, txtUsername, lblPass, txtPassword, lblConfirm, txtConfirm, btnSubmit });
+        }
+
+        private void BtnSubmit_Click(object sender, EventArgs e)
+        {
+            if (txtPassword.Text != txtConfirm.Text)
+            {
+                MessageBox.Show("Passwords do not match.");
+                return;
+            }
+
+            
+            string checkQuery = "SELECT * FROM Users WHERE Username=@username";
+            DataTable dt = DataAccess.ExecuteQuery(checkQuery, new SqlParameter("@username", txtUsername.Text));
+            if (dt.Rows.Count > 0)
+            {
+                MessageBox.Show("Username already exists.");
+                return;
+            }
+
+            
+            string insertQuery = "INSERT INTO Users (Username, Password) VALUES (@username, @password)";
+            int result = DataAccess.ExecuteNonQuery(insertQuery,
+                new SqlParameter("@username", txtUsername.Text),
+                new SqlParameter("@password", txtPassword.Text));
+
+            if (result > 0)
+            {
+                MessageBox.Show("Registration successful!");
+                this.Close();
+            }
+            else
+            {
+                MessageBox.Show("Registration failed.");
+            }
+        }
+    }
+
+    public class MainForm : Form
+    {
+        private string currentUser;
+        private DataGridView dgvEmployees;
+        private TextBox txtName, txtPosition, txtSalary;
+        private Button btnAdd;
+
+        public MainForm(string username)
+        {
+            currentUser = username;
+            this.Text = "Employee Management - " + username;
+            this.Size = new Size(500, 400);
+            this.StartPosition = FormStartPosition.CenterScreen;
+
+            dgvEmployees = new DataGridView() { Location = new Point(10, 10), Size = new Size(460, 200), AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill };
+            LoadEmployees();
+
+            Label lblName = new Label() { Text = "Name:", Location = new Point(10, 220), AutoSize = true };
+            txtName = new TextBox() { Location = new Point(60, 220), Width = 100 };
+
+            Label lblPosition = new Label() { Text = "Position:", Location = new Point(180, 220), AutoSize = true };
+            txtPosition = new TextBox() { Location = new Point(250, 220), Width = 100 };
+
+            Label lblSalary = new Label() { Text = "Salary:", Location = new Point(370, 220), AutoSize = true };
+            txtSalary = new TextBox() { Location = new Point(430, 220), Width = 50 };
+
+            btnAdd = new Button() { Text = "Add", Location = new Point(10, 260) };
+            btnAdd.Click += BtnAdd_Click;
+
+            this.Controls.Add(dgvEmployees);
+            this.Controls.AddRange(new Control[] { lblName, txtName, lblPosition, txtPosition, lblSalary, txtSalary, btnAdd });
+        }
+
+        
+        private void LoadEmployees()
+        {
+            DataTable dt = DataAccess.ExecuteQuery("SELECT * FROM Employees");
+            dgvEmployees.DataSource = dt;
+        }
+
+        private void BtnAdd_Click(object sender, EventArgs e)
+        {
+            string query = "INSERT INTO Employees (Name, Position, Salary) VALUES (@name, @position, @salary)";
+            int result = DataAccess.ExecuteNonQuery(query,
+                new SqlParameter("@name", txtName.Text),
+                new SqlParameter("@position", txtPosition.Text),
+                new SqlParameter("@salary", txtSalary.Text));
+            if (result > 0)
+            {
+                MessageBox.Show("Employee added successfully.");
+                LoadEmployees();
+            }
+            else
+            {
+                MessageBox.Show("Failed to add employee.");
+            }
+        }
+    }
+}
+
+
+
+
+
