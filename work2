@@ -1,0 +1,153 @@
+using System;
+using System.Drawing;
+using System.IO;
+using System.Text.RegularExpressions;
+using System.Windows.Forms;
+
+namespace SimpleTextEditor
+{
+    public partial class TextEditorForm : Form
+    {
+        public TextEditorForm()
+        {
+            InitializeComponent();
+        }
+
+        private void InitializeComponent()
+        {
+            
+            this.Text = "Simple Text Editor";
+            this.Size = new Size(800, 600);
+
+            
+            MenuStrip menuStrip = new MenuStrip();
+
+            
+            ToolStripMenuItem fileMenu = new ToolStripMenuItem("File");
+            fileMenu.DropDownItems.Add("New", null, NewFile);
+            fileMenu.DropDownItems.Add("Open", null, OpenFile);
+            fileMenu.DropDownItems.Add("Save", null, SaveFile);
+            fileMenu.DropDownItems.Add("Print", null, PrintFile);
+            fileMenu.DropDownItems.Add("Exit", null, (s, e) => this.Close());
+
+            
+            ToolStripMenuItem editMenu = new ToolStripMenuItem("Edit");
+            editMenu.DropDownItems.Add("Cut", null, (s, e) => txtEditor.Cut());
+            editMenu.DropDownItems.Add("Copy", null, (s, e) => txtEditor.Copy());
+            editMenu.DropDownItems.Add("Paste", null, (s, e) => txtEditor.Paste());
+
+            
+            ToolStripMenuItem formatMenu = new ToolStripMenuItem("Format");
+            formatMenu.DropDownItems.Add("Font", null, ChangeFont);
+            formatMenu.DropDownItems.Add("Text Color", null, ChangeTextColor);
+
+            menuStrip.Items.Add(fileMenu);
+            menuStrip.Items.Add(editMenu);
+            menuStrip.Items.Add(formatMenu);
+
+            
+            txtEditor = new TextBox
+            {
+                Multiline = true,
+                Dock = DockStyle.Fill,
+                ScrollBars = ScrollBars.Both
+            };
+
+            
+            StatusStrip statusStrip = new StatusStrip();
+            wordCountLabel = new ToolStripStatusLabel("Word Count: 0");
+            statusStrip.Items.Add(wordCountLabel);
+
+                        ToolStrip toolStrip = new ToolStrip();
+                        
+            toolStrip.Items.Add(new ToolStripButton("Open", null, OpenFile));
+            toolStrip.Items.Add(new ToolStripButton("Save", null, SaveFile));
+            toolStrip.Items.Add(new ToolStripButton("Print", null, PrintFile));
+            
+            txtEditor.TextChanged += UpdateWordCount;
+       
+            this.Controls.Add(txtEditor);
+            this.Controls.Add(toolStrip);
+            this.Controls.Add(menuStrip);
+            this.Controls.Add(statusStrip);
+            this.MainMenuStrip = menuStrip;
+        }
+
+        private TextBox txtEditor;
+        private ToolStripStatusLabel wordCountLabel;
+
+        private void NewFile(object sender, EventArgs e)
+        {
+            txtEditor.Clear();
+        }
+
+        private void OpenFile(object sender, EventArgs e)
+        {
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.Filter = "Text Files|*.txt";
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    txtEditor.Text = File.ReadAllText(openFileDialog.FileName);
+                }
+            }
+        }
+
+        private void SaveFile(object sender, EventArgs e)
+        {
+            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+            {
+                saveFileDialog.Filter = "Text Files|*.txt";
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    File.WriteAllText(saveFileDialog.FileName, txtEditor.Text);
+                }
+            }
+        }
+
+        private void PrintFile(object sender, EventArgs e)
+        {
+            using (PrintDialog printDialog = new PrintDialog())
+            {
+                if (printDialog.ShowDialog() == DialogResult.OK)
+                {
+                    
+                }
+            }
+        }
+
+        private void ChangeFont(object sender, EventArgs e)
+        {
+            using (FontDialog fontDialog = new FontDialog())
+            {
+                if (fontDialog.ShowDialog() == DialogResult.OK)
+                {
+                    txtEditor.Font = fontDialog.Font;
+                }
+            }
+        }
+
+        private void ChangeTextColor(object sender, EventArgs e)
+        {
+            using (ColorDialog colorDialog = new ColorDialog())
+            {
+                if (colorDialog.ShowDialog() == DialogResult.OK)
+                {
+                    txtEditor.ForeColor = colorDialog.Color;
+                }
+            }
+        }
+
+        private void UpdateWordCount(object sender, EventArgs e)
+        {
+            int wordCount = Regex.Matches(txtEditor.Text, @"\b\S+\b").Count;
+            wordCountLabel.Text = $"Word Count: {wordCount}";
+        }
+     
+        static void Main()
+        {
+            Application.EnableVisualStyles();
+            Application.Run(new TextEditorForm());
+        }
+    }
+}
