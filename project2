@@ -1,0 +1,193 @@
+
+<configuration>
+  <connectionStrings>
+    <add name="HospitalDBConnectionString"
+         connectionString="Data Source=.;Initial Catalog=HospitalDB;Integrated Security=True"
+         providerName="System.Data.SqlClient" />
+  </connectionStrings>
+</configuration>
+
+using System;
+using System.Windows.Forms;
+
+namespace HospitalManagementSystem
+{
+    static class Program
+    {
+        [STAThread]
+        static void Main()
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new LoginForm());
+        }
+    }
+}
+
+using System;
+using System.Data.SqlClient;
+using System.Windows.Forms;
+using System.Configuration;
+
+namespace HospitalManagementSystem
+{
+    public class LoginForm : Form
+    {
+        private TextBox txtUsername;
+        private TextBox txtPassword;
+        private Button btnLogin;
+
+        public LoginForm()
+        {
+            this.Text = "Login";
+            this.Width = 300;
+            this.Height = 200;
+
+            Label lblUser = new Label() { Left = 20, Top = 20, Text = "Username:" };
+            txtUsername = new TextBox() { Left = 110, Top = 20, Width = 150 };
+
+            Label lblPass = new Label() { Left = 20, Top = 60, Text = "Password:" };
+            txtPassword = new TextBox() { Left = 110, Top = 60, Width = 150, PasswordChar = '*' };
+
+            btnLogin = new Button() { Left = 110, Top = 100, Width = 100, Text = "Login" };
+            btnLogin.Click += BtnLogin_Click;
+
+            this.Controls.Add(lblUser);
+            this.Controls.Add(txtUsername);
+            this.Controls.Add(lblPass);
+            this.Controls.Add(txtPassword);
+            this.Controls.Add(btnLogin);
+        }
+
+        private void BtnLogin_Click(object sender, EventArgs e)
+        {
+            string username = txtUsername.Text.Trim();
+            string password = txtPassword.Text.Trim();
+
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            {
+                MessageBox.Show("Please enter both username and password.");
+                return;
+            }
+
+            try
+            {
+                
+                string connectionString = ConfigurationManager.ConnectionStrings["HospitalDBConnectionString"].ConnectionString;
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    string query = "SELECT COUNT(*) FROM Users WHERE Username=@username AND Password=@password";
+                    SqlCommand cmd = new SqlCommand(query, conn);
+                    cmd.Parameters.AddWithValue("@username", username);
+                    cmd.Parameters.AddWithValue("@password", password);  // Plain text for demo
+
+                    conn.Open();
+                    int count = (int)cmd.ExecuteScalar();
+
+                    if (count > 0)
+                    {
+                        MessageBox.Show("Login successful!");
+                        this.Hide();
+                        PatientForm patientForm = new PatientForm();
+                        patientForm.ShowDialog();
+                        this.Close();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Invalid credentials, please try again.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error occurred: " + ex.Message);
+            }
+        }
+    }
+}
+
+using System;
+using System.Data;
+using System.Data.SqlClient;
+using System.Windows.Forms;
+using System.Configuration;
+
+namespace HospitalManagementSystem
+{
+    public class PatientForm : Form
+    {
+        private DataGridView dgvPatients;
+        private Button btnRefresh;
+        private Button btnClose;
+
+        public PatientForm()
+        {
+            this.Text = "Patient Management";
+            this.Width = 800;
+            this.Height = 600;
+
+            dgvPatients = new DataGridView()
+            {
+                Left = 10,
+                Top = 10,
+                Width = 760,
+                Height = 500
+            };
+
+            btnRefresh = new Button()
+            {
+                Left = 10,
+                Top = 520,
+                Width = 100,
+                Text = "Refresh"
+            };
+            btnRefresh.Click += BtnRefresh_Click;
+
+            btnClose = new Button()
+            {
+                Left = 120,
+                Top = 520,
+                Width = 100,
+                Text = "Close"
+            };
+            btnClose.Click += BtnClose_Click;
+
+            this.Controls.Add(dgvPatients);
+            this.Controls.Add(btnRefresh);
+            this.Controls.Add(btnClose);
+
+            LoadPatients();
+        }
+
+        private void LoadPatients()
+        {
+            try
+            {
+                string connectionString = ConfigurationManager.ConnectionStrings["HospitalDBConnectionString"].ConnectionString;
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    string query = "SELECT * FROM Patients";
+                    SqlDataAdapter adapter = new SqlDataAdapter(query, conn);
+                    DataTable dt = new DataTable();
+                    adapter.Fill(dt);
+                    dgvPatients.DataSource = dt;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error loading patients: " + ex.Message);
+            }
+        }
+
+        private void BtnRefresh_Click(object sender, EventArgs e)
+        {
+            LoadPatients();
+        }
+
+        private void BtnClose_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+    }
+}
+
